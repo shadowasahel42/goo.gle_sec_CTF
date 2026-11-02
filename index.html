@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operation Cymbal: Cold Room – CTF Writeup | Asahel Kipkemei</title>
+<style>
+:root{--bg:#0a0f0d;--panel:#0f1814;--g:#39ff14;--dim:#8fbf86;--tx:#d6f5d0;--line:#1e3a26}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.65 'Fira Code','Courier New',monospace}
+main{max-width:980px;margin:0 auto;padding:24px 18px 80px}
+h1,h2,h3{color:var(--g);line-height:1.25}
+h1{font-size:2rem;text-shadow:0 0 12px #39ff1455;margin:.2em 0}
+h2{font-size:1.45rem;border-bottom:1px solid var(--line);padding-bottom:8px;margin-top:56px}
+h2::before{content:"$ ";color:var(--dim)}
+h3{font-size:1.05rem;margin:0 0 6px}
+a{color:var(--g)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--g);outline-offset:3px}
+.cv{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;border:1px solid var(--g);background:var(--panel);padding:22px;margin-top:20px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
+.stat{border:1px solid var(--line);padding:10px}
+.stat b{display:block;color:var(--g);font-size:1.4rem}
+.stat span{color:var(--dim);font-size:.8rem}
+.links a{display:inline-block;margin:4px 8px 0 0;padding:4px 10px;border:1px solid var(--g);text-decoration:none}
+.links a:hover{background:var(--g);color:#000}
+img{max-width:100%;display:block;border:1px solid var(--line)}
+figure{margin:14px 0}
+figcaption{color:var(--dim);font-size:.8rem;margin-top:4px}
+.ph{border:2px dashed var(--g);color:var(--g);padding:22px 14px;text-align:center;font-size:.85rem;background:#39ff1408;margin:12px 0}
+.lore p{max-width:76ch}
+.meta{color:var(--dim)}
+.step{border-left:3px solid var(--g);background:var(--panel);padding:14px 18px;margin:18px 0}
+.step p{margin:.4em 0}
+.ans{display:block;margin-top:8px;padding:8px 12px;background:#000;border:1px solid var(--g);color:var(--g);word-break:break-all}
+.lbl{color:var(--dim)}
+ul li{margin:8px 0}
+.pill{color:#000;background:var(--g);padding:1px 8px;font-size:.8rem}
+@media(max-width:720px){.cv{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <span class="pill">CTF WRITEUP</span>
+  <h1>Operation Cymbal: Cold Room</h1>
+  <p class="meta">Google Cloud Security × Hack The Box × Google Cloud Security Community · 2026 CTF</p>
+</header>
+
+<figure id="banner"></figure>
+
+<section class="cv" aria-label="Profile">
+  <div>
+    <h2 style="margin:0;border:0;padding:0">Asahel Kipkemei</h2>
+    <p class="meta">Team: FutureTechAfrica</p>
+    <div class="stats">
+      <div class="stat"><b>323 / 1716</b><span>Rank</span></div>
+      <div class="stat"><b>18 / 18</b><span>Flags solved</span></div>
+      <div class="stat"><b>2,075</b><span>Total points</span></div>
+    </div>
+    <div class="links">
+      <a href="#" rel="noopener">LinkedIn (add link)</a>
+      <a href="#" rel="noopener">TryHackMe (add link)</a>
+      <a href="#" rel="noopener">Certifications (add link)</a>
+    </div>
+  </div>
+  <figure id="cert" style="margin:0"></figure>
+</section>
+<figure id="board"></figure>
+
+<section class="lore">
+  <h2>Event lore</h2>
+  <p><b>Event:</b> Operation Cymbal: Cold Room<br><b>Dates:</b> Oct 29 2026, 06:00 PM to Nov 01 2026, 06:00 PM</p>
+  <h3>About the event</h3>
+  <p>In the 2050s, cyber insurance nearly collapsed because no one could agree on what had actually happened after a breach. The solution was the Clearinghouse: an independent body that freezes a victim’s environment, preserves the record, and certifies the reconstruction of an incident.</p>
+  <p>On October 29, enter the Cymbal Investments Cold Room. Three incidents unfolded across the same environment in eight days. A marketing click that should have meant nothing. A trusted developer tool doing work nobody asked it to do. An account that belonged to someone else for about an hour.</p>
+  <p>They look unrelated. Your assignment is to prove what happened.</p>
+  <p>Working inside the frozen environment, you’ll follow evidence across identity, endpoints, cloud activity, mail, build systems, and data. You’ll need to distinguish malicious actions from legitimate maintenance happening at almost the same time, reconstruct each intrusion end to end, and file a defensible finding before the competing reconstructors beat you to the record.</p>
+  <p>And somewhere in the evidence may be something the Clearinghouse did not ask you to find: the Tell, a detail that could connect one operator to far more than a single incident.</p>
+  <p><i>Can you reconstruct the truth before someone else defines it?</i></p>
+</section>
+
+<section>
+  <h2>Methodology</h2>
+  <p>All three incidents happened on 15 October 2026. I figured the fastest way to work inside a frozen environment was to live in UDM search in Google SecOps, with the time range set to <code>LAST 2 MONTHS</code> so nothing fell outside the window.</p>
+  <div id="m-imgs"></div>
+</section>
+
+<div id="flags"></div>
+
+<section>
+  <h2>Lessons learned</h2>
+  <ul>
+    <li>The answer lives in the <b>Raw Log</b>. The UI truncates data.</li>
+    <li>Pivot on the right identifier: Workspace = email, Sysmon = Windows user, Proxy = username. Use the grouped fields.</li>
+    <li>Injected processes run as <b>SYSTEM</b>, so search by hostname.</li>
+    <li>Watch UDM syntax: regex goes in slashes, and underscores must be exact.</li>
+  </ul>
+</section>
+</main>
+
+<script>
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ph=d=>`<div class="ph">[Missing Screenshot: ${esc(d)}]</div>`;
+// Image with graceful fallback: if the file is absent, swap in the dashed placeholder.
+function img(file,desc){
+  const w=document.createElement('div');
+  w.innerHTML=`<figure><img src="screenshots/${file}" alt="${esc(desc)}" loading="lazy"><figcaption>${esc(desc)}</figcaption></figure>`;
+  w.querySelector('img').onerror=()=>{w.innerHTML=ph(desc)};
+  return w;
+}
+const put=(id,file,desc)=>document.getElementById(id).appendChild(img(file,desc));
+put('banner','08-event-banner.png','Operation Cymbal: Cold Room event banner');
+put('cert','00-certificate.png','CTF Certificate of Participation: Asahel Kipkemei');
+put('board','01-scoreboard.png','HTB scoreboard showing 18/18 flags');
+put('m-imgs','02-tenant.png','SecOps tenant login screen (Tenant 22)');
+put('m-imgs','07-siem-query.png','SIEM Search with the UDM query editor');
+
+const S=[
+{t:'Scenario 1: Deceptive Click',k:'Investigation',intro:'A marketing click that should have meant nothing.',f:[
+ ['Hostname','I went to the SOAR case queue and searched for <i>Download And Execute</i>. I opened Case ID 33 and read the Gemini Summary, which named the affected workstation.','CYM-DEN-W10-042.CYMBAL.CORP',[['03-soar-cases.png','SOAR case dashboard'],['04-case-summary.png','Case summary for Deceptive Click']]],
+ ['Blog domain (Referer)','I knew from the GTI profile that FAKEUPDATES campaigns use compromised blogs. I queried the Zscaler logs for the user <code>marcus</code> and found the blog 14 seconds before the download.','marketingtrends-insider.com',[[null,'Zscaler proxy logs for user marcus showing the blog referer 14 seconds before the download']]],
+ ['Target svchost PID','I searched Sysmon Event ID 8 for process injection. I checked the Raw Log, and it showed the target PID, not the source PID.','624',[['05-svchost-pid.png','Sysmon event showing target PID 624']]],
+ ['Kerberoasting SPN','I searched the Domain Controller for Event ID 4769. I used the grouped <code>hostname</code> field because <code>principal.hostname</code> fails on DCs.','MSSQLSvc/CYM-DB-01.cymbal.corp:1433',[[null,'UDM search of Event ID 4769 on the Domain Controller showing the requested SPN']]],
+ ['Lateral movement account','I followed the NTLM login for the service account to the file server, right after the Kerberoasting.','svc_backup',[[null,'NTLM logon of the service account to the file server']]],
+ ['Staged zip','I queried the file server for file creation events by <code>svc_backup</code>.','Financial_Audit_2026.zip',[[null,'File creation events by svc_backup on the file server']]]]},
+{t:'Scenario 2: OAuth Heist',k:'Threat Hunting',intro:'An account that belonged to someone else for about an hour.',f:[
+ ['Phishing domain','I found the ShinyHunters IOC IP in Emerging Threats. I then used the grouped <code>ip</code> field in the proxy logs to find the destination domain.','sso-cymbal-portal.com',[['06-oauth-flags.png','OAuth Heist flags progress screen']]],
+ ['Purged MFA email','Workspace logs are indexed by email address, so I searched <code>email = /elena/</code> to find the deleted transaction.','Okta: A new MFA factor was added',[[null,'Workspace log search with email = /elena/ showing the deleted message']]],
+ ['Stolen document','I followed the attacker’s proxy IP to a Drive download.','Cymbal_Q3_Database_Architecture_and_Service_Accounts.pdf',[[null,'Drive download from the attacker proxy IP']]],
+ ['Privileged account','I pivoted to the user’s workstation and found Event ID 4624 for the DB service account.','svc_dbadmin',[[null,'Event ID 4624 for the DB service account on the workstation']]],
+ ['DB dump file','I searched the DB server hostname for processes and found <code>sqlcmd.exe</code> along with the backup file.','cymbal_cust_q3.bak',[[null,'sqlcmd.exe process events on the DB server']]],
+ ['Exfiltration URL','I found the outbound POST request in the network logs, following the zstd compression.','http://142.11.200.188:8888/upload/cymbal_q3_exfil.tar.zst',[[null,'Outbound POST request to 142.11.200.188:8888 in network logs']]]]},
+{t:'Scenario 3: Rogue Synthesis',k:'AI Misuse',intro:'A trusted developer tool doing work nobody asked it to do.',f:[
+ ['Developer username','I queried proxy logs for LLM API hostnames (<code>generativelanguage</code>) and filtered out demo traffic.','alex.chen',[[null,'Proxy logs filtered on generativelanguage hostnames']]],
+ ['Downloaded package','I looked at Alex’s proxy history before the API call and found a typosquatted VS Code marketplace domain.','SyntaxOptimizer-2.1.4.vsix',[[null,'Proxy history showing the typosquatted VS Code marketplace download']]],
+ ['Dropped executable','I pivoted to the Sysmon logs on Alex’s machine. The extension dropped a C script and compiled it via <code>gcc.exe</code>.','sys_worker.exe',[[null,'Sysmon process creation for gcc.exe compiling the dropped script']]],
+ ['Token file','The process hollowed into SYSTEM, so I searched by hostname rather than user. I found <code>cmd.exe</code> reading the gcloud folder.','credentials.db',[[null,'cmd.exe reading the gcloud folder, searched by hostname']]],
+ ['Exfil domain','I found the fake telemetry POST that followed the token theft.','dev-metrics-cdn.com',[[null,'Fake telemetry POST after the token theft']]],
+ ['Overwritten script','I followed the stolen <code>svc_cicd_deploy</code> account to the CI runner and found the overwritten script.','build_production.ps1',[[null,'CI runner activity for svc_cicd_deploy showing the overwritten script']]]]}
+];
+const root=document.getElementById('flags');
+S.forEach(s=>{
+  const sec=document.createElement('section');
+  sec.innerHTML=`<h2>${esc(s.t)}</h2><p class="meta">${esc(s.k)}. ${esc(s.intro)}</p>`;
+  s.f.forEach((f,i)=>{
+    const d=document.createElement('article');d.className='step';
+    d.innerHTML=`<h3>Flag ${i+1}: ${esc(f[0])}</h3><p><span class="lbl">Reasoning:</span> ${f[1]}</p><span class="ans"><span class="lbl">Answer:</span> ${esc(f[2])}</span>`;
+    f[3].forEach(([file,desc])=>d.appendChild(file?img(file,desc):Object.assign(document.createElement('div'),{innerHTML:ph(desc)}).firstChild));
+    sec.appendChild(d);
+  });
+  root.appendChild(sec);
+});
+</script>
+</body>
+</html>
